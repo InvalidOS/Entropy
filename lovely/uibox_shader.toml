@@ -4,7 +4,7 @@ dump_lua = true
 priority = 1
 
 # UI Element Shader Patch by InvalidOS
-# v2.0.2
+# v2.0.3
 # play lemniscate (when it releases) (it is not released yet)
 
 ## hacky method of preventing repeat patches
@@ -18,8 +18,8 @@ position = "at"
 payload = '''-- [ THE PATCH WAS USED UP ]''' # haha funny deltarune reference
 match_indent = true
 
-## UIBox shaders
-## UIElement:draw_pixellated_rect()
+## UIBox shader
+## UIElement:draw_self()
 [[patches]]
 [patches.pattern]
 target = "engine/ui.lua"
@@ -32,21 +32,37 @@ payload = '''
         love.graphics.polygon((_type == 'line' or _type == 'line_emboss') and 'line' or "fill", self.pixellated_rect[_type].vertices)
     end
 
+    local function to_screenspace()
+        local T = self.CT or self.T
+        local coords = {}
+        self.ARGS.collides_with_point_translation = self.ARGS.collides_with_point_translation or {}
+        self.ARGS.collides_with_point_rotation = self.ARGS.collides_with_point_rotation or {}
+        local _t = self.ARGS.collides_with_point_translation
+        local _r = self.ARGS.collides_with_point_rotation
+        if self.container ~= self then
+            _t.x, _t.y = self.container.T.w/2, self.container.T.h/2
+            point_translate(T, _t)
+            _t.x, _t.y = -self.container.T.w/2+self.container.T.x, -self.container.T.h/2+self.container.T.y
+            point_translate(T, _t)
+            T.x = T.x * G.TILESCALE*G.TILESIZE*G.CANV_SCALE
+            T.y = T.y * G.TILESCALE*G.TILESIZE*G.CANV_SCALE
+        end
+        return T
+    end
+
     local function _draw_layer(shader, send)
         local args = {
             G.TIMERS.REAL/28,
             G.TIMERS.REAL
         }
         
-        if shader == "none" or shader == "dissolve" then
-            _draw()
-            return
-        elseif send then
+        if send then
             for k, v in ipairs(send) do
                 local val = v.val or (v.func and v.func(self))
 
                 -- thanks talisman
-                if Talisman and type(val) == "table" and is_number(val) then
+                -- for anyone copying this: replace `Entropy.is_big(val)` with `Talisman and type(val) == "table" and is_number(val)`
+                if Entropy.is_big(val) then
                 	if val > to_big(1e300) then
                 		val = 1e300
                 	else
@@ -62,13 +78,17 @@ payload = '''
             local prefix = SMODS.Shaders[shader] and SMODS.Shaders[shader].mod and SMODS.Shaders[shader].mod.prefix
             local prefixless_key = prefix and string.sub(shader, #prefix + 2) or shader
 
+            --local screen_pos = to_screenspace(self)
             local tile_scale = G.TILESCALE*G.TILESIZE
+
+            --print(screen_pos.x, screen_pos.y)
+            print(self.T.x * tile_scale, self.T.y * tile_scale)
 
             -- actually supported
             G.SHADERS[shader]:send(prefixless_key, args)
             G.SHADERS[shader]:send("uibox_size", {self.VT.w * tile_scale, self.VT.h * tile_scale})
-            G.SHADERS[shader]:send("uibox_pos", {self.VT.x * tile_scale, self.VT.y * tile_scale})
-            -- G.SHADERS[shader]:send("screen_scale", G.TILESCALE*G.TILESIZE*G.CANV_SCALE)
+            G.SHADERS[shader]:send("uibox_pos", {self.T.x * tile_scale, self.T.y * tile_scale})
+            -- G.SHADERS[shader]:send("screen_scale", tile_scale)
             
             -- placeholder values
             -- G.SHADERS[shader]:send("time",123.33412*(12.5123152)%3000) -- if you use this in a shader this is equal to 1543.1953843546

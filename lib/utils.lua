@@ -2011,6 +2011,4 @@ function Node:to_screenspace()
     return T
 end
 
-function UIElement:to_screenspace()
-    return Node.to_screenspace(self)
-end
+UIElement.to_screenspace = Node.to_screenspace

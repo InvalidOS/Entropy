@@ -92,11 +92,8 @@ vec4 effect( vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords
 
     vec2 uv = (screen_coords - uibox_pos) / uibox_size.xy;
 
-    //if (uv.x < 0.00001) {
-    //    uv = (screen_coords - (uibox_pos / screen_scale)) / (uibox_size.xy * screen_scale);
-    //}
-
     uv.x = uv.x * (love_ScreenSize.x/love_ScreenSize.y);
+    number uvy2 = uv.y * (love_ScreenSize.y/love_ScreenSize.x);
     uv.y = uv.y / (20.);
 
     vec4 hsl = HSL(vec4(tex.r, tex.g, tex.b, tex.a));
@@ -139,10 +136,12 @@ vec4 effect( vec4 colour, Image texture, vec2 texture_coords, vec2 screen_coords
 
 
     vec4 rgb = HSVtoRGB(hsl);
+    rgb.r = mix(uvy2*0.25, 1, rgb.r);
+    rgb.a = 1;
 
     //rgb.r += flame1;
     //rgb.b += flame2;
     //rgb.g += flame3;
 
-    return vec4(rgb.r, rgb.g, rgb.b, 1);
+    return rgb;
 }
